@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta name="referrer" content="no-referrer">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta property="og:title" content="Full Menu — Interactive Menu">
+<meta property="og:description" content="Интерактивное меню с корзиной и фильтрами. Мой первый проект в портфолио.">
+<meta property="og:image" content="https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800">
+<meta property="og:type" content="website">
+  <title> Full Menu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+    body { font-family: 'Inter', sans-serif; background: #fff; -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    #active-bg { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    
+    .nav-link { 
+        position: relative;
+        z-index: 10;
+        padding: 8px 20px;
+        border-radius: 9999px;
+        background-color: #F1F3F5;
+        color: #2D2E3E !important;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+    .nav-link.active { color: #ffffff !important; background-color: transparent !important; }
+    .filter-btn { color: #5C5E66; }
+    .filter-btn.active-filter { background-color: #F1F3F5; box-shadow: inset 0 0 0 1px #8BC34A; }
+    #cart-modal { transition: transform .4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; }
+
+   
+    .menu-grid {
+        display: grid;
+       
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 16px;
+        row-gap: 40px;
+    }
+
+    @media (min-width: 768px) {
+
+        .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    }
+
+    @media (min-width: 1024px) {
+       
+        .menu-grid { grid-template-columns: repeat(4, 1fr); gap: 40px; }
+    }
+
+   
+    @media (max-width: 640px) {
+        #filter-row { font-size: 11px; }
+        .filter-btn { padding: 4px 10px; }
+        header { padding-top: env(safe-area-inset-top); }
+        #cart-trigger { width: 92%; bottom: 20px; }
+    }
+
+    #nav-container { display: flex; align-items: center; min-height: 44px; }
+</style>
+
+</head>
+<body class="text-[#2D2E3E] antialiased">
+
+<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md">
+  <div class="px-4 py-3 flex items-center justify-between border-b border-gray-50">
+    <span class="text-[20px] font-bold text-gray-900">Фильтры</span>
+    <div id="filter-row" class="flex gap-2 overflow-x-auto no-scrollbar ml-4">
+      <button onclick="setFilter('Все')" class="filter-btn active-filter px-3 py-1 bg-[#F1F3F5] rounded-full text-[12px] font-medium transition-all">Все</button>
+      <button onclick="setFilter('⭐')" class="filter-btn px-3 py-1 bg-[#F1F3F5] rounded-full text-[12px] font-medium flex items-center gap-1 transition-all">
+        <span class="w-4 h-4 bg-[#8BC34A] text-white rounded-full flex items-center justify-center text-[10px]">★</span> Хиты
+      </button>
+      <button onclick="setFilter('🌿')" class="filter-btn px-3 py-1 bg-[#F1F3F5] rounded-full text-[12px] font-medium flex items-center gap-1 transition-all">
+        <span class="w-4 h-4 bg-[#8BC34A] text-white rounded-full flex items-center justify-center text-[8px]">NEW</span> Новинки
+      </button>
+      <button onclick="setFilter('👶')" class="filter-btn px-3 py-1 bg-[#F1F3F5] rounded-full text-[12px] font-medium flex items-center gap-1 transition-all">
+        <span class="w-4 h-4 bg-[#8BC34A] text-white rounded-full flex items-center justify-center text-[10px]">☺</span> Детям
+      </button>
+      <button onclick="setFilter('💪')" class="filter-btn px-3 py-1 bg-[#F1F3F5] rounded-full text-[12px] font-medium flex items-center gap-1 transition-all">
+        <span class="w-4 h-4 bg-[#8BC34A] text-white rounded-full flex items-center justify-center text-[10px]">⚖</span> Для спортсменов
+      </button>
+    </div>
+  </div>
+
+  <nav class="px-4 py-4 overflow-x-auto no-scrollbar border-b border-gray-100 shadow-sm">
+    <div id="nav-container" class="flex gap-2 relative min-w-max items-center">
+      <div id="active-bg" class="absolute h-full bg-[#2D2E3E] rounded-full z-0 transition-all duration-300"></div>
+    </div>
+  </nav>
+</header>
+
+<main id="menu-content" class="px-4 pt-6 pb-40 space-y-16"></main>
+
+<div id="cart-trigger" onclick="toggleCart(true)" class="fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-[#8E24AA] text-white p-2 rounded-[2.5rem] shadow-2xl flex items-center justify-between translate-y-40 transition-transform duration-500 z-50">
+  <div id="cart-previews" class="flex -space-x-3 ml-3"></div>
+  <div class="bg-white/20 px-8 py-4 rounded-full flex items-center gap-2">
+    <span id="trigger-price" class="text-xl font-black">0</span>
+    <span class="text-[10px] font-black uppercase opacity-80">сом</span>
+  </div>
+</div>
+
+<div id="cart-modal" class="fixed inset-0 bg-white translate-y-full flex flex-col">
+  <div class="p-5 flex justify-between items-center border-b">
+    <h2 class="text-xl font-black text-[#8E24AA] uppercase">Корзина</h2>
+    <button onclick="toggleCart(false)" class="w-10 h-10 rounded-full bg-gray-100 font-black text-lg">✕</button>
+  </div>
+  <div id="cart-items-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+  <div class="p-5 border-t bg-gray-50">
+    <div class="flex justify-between items-center mb-4">
+      <span class="text-sm font-bold text-gray-400 uppercase">Итого</span>
+      <span class="text-2xl font-black"><span id="modal-total-price">0</span> сом</span>
+    </div>
+    <button class="w-full bg-[#8E24AA] text-white py-4 rounded-2xl font-black uppercase">Заказать</button>
+  </div>
+</div>
+
+<script>
+const menuData = [
+  {
+    id: "signature",
+    name: "Фирменные завтраки",
+    items: [
+      { id: 101, name: "Завтрак с индейкой су-вид, картофелем и томатами", price: 550, weight: "320 г", icon: "⭐", img: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=500" },
+      { id: 102, name: "Омлет с шампиньонами и сыром Чеддер", price: 390, weight: "280 г", icon: "💪", img: "https://images.unsplash.com/photo-1510693206972-df098062cb71?w=500" },
+      { id: 103, name: "Омлет со спелым авокадо", price: 430, weight: "200 г", icon: "💪", img: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=500" },
+      { id: 104, name: "Английский завтрак с колбасками", price: 620, weight: "400 г", icon: "🌿", img: "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=500" },
+      { id: 105, name: "Бенедикт на бриоши с лососем", price: 580, weight: "250 г", icon: "⭐", img: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=500&q=80" },
+      { id: 106, name: "Шакшука с пряностями", price: 410, weight: "300 г", icon: "🌿", img: "https://images.unsplash.com/photo-1590412200988-a436970781fa?w=500" }
+    ]
+  },
+  {
+    id: "sandwiches",
+    name: "Сэндвичи и тосты",
+    items: [
+      { id: 301, name: "Авокадо тост с лососем", price: 490, weight: "190 г", icon: "🌿", img: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=500" },
+      { id: 302, name: "Кесадилья с курицей", price: 370, weight: "200 г", icon: "⭐", img: "https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?w=500" },
+      { id: 303, name: "Авокадо тост с креветками", price: 530, weight: "190 г", icon: "⭐", img: "https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?w=500" }
+    ]
+  },
+  {
+    id: "panini",
+    name: "Панини",
+    items: [
+      { id: 401, name: "Панини с сочной курицей", price: 299, weight: "190 г", icon: "🥪", img: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=500" },
+      { id: 402, name: "Панини с нежной телятиной", price: 299, weight: "190 г", icon: "🥩", img: "https://images.unsplash.com/photo-1553909489-cd47e0907980?w=500&auto=format&fit=crop&q=80" },
+      { id: 403, name: "Панини с подкопченным лососем", price: 389, weight: "190 г", icon: "🌿", img: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=500&auto=format&fit=crop&q=80" },
+      { id: 404, name: "Панини с тунцом и овощами", price: 349, weight: "190 г", icon: "🐟", img: "https://images.pexels.com/photos/1603901/pexels-photo-1603901.jpeg?auto=compress&cs=tinysrgb&w=800" },
+      { id: 405, name: "Круассан с лососем и сыром", price: 399, weight: "180 г", icon: "🥐", img: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&auto=format&fit=crop&q=80" }
+    ]
+  },
+  {
+    id: "bowls",
+    name: "Боулы",
+    items: [
+      { id: 701, name: "Боул с киноа, авокадо и яйцом пашот", price: 480, weight: "280 г", icon: "💪", img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500" },
+      { id: 702, name: "Боул с лососем слабой соли и чукой", price: 590, weight: "300 г", icon: "⭐", img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500" },
+      { id: 703, name: "Боул с обжаренными креветками и манго", price: 620, weight: "290 г", icon: "🌿", img: "https://images.unsplash.com/photo-1551248429-40975aa4de74?w=500" }
+    ]
+  },
+  {
+    id: "sweet",
+    name: "Сладкие завтраки",
+    items: [
+      { id: 501, name: "Воздушные панкейки с молочным шоколадом", price: 390, weight: "180 г", icon: "👶", img: "https://images.unsplash.com/photo-1528207776546-365bb710ee93?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" },
+      { id: 502, name: "Панкейки с фисташковым тирамису и тар-таром из клубники", price: 450, weight: "180 г", icon: "🍰", img: "https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?auto=compress&cs=tinysrgb&w=800" },
+      { id: 503, name: "Блины с фисташковым тирамису и тар-таром из клубники", price: 390, weight: "170 г", icon: "🍰", img: "https://images.unsplash.com/photo-1519676867240-f03562e64548?w=500" }
+    ]
+  },
+  {
+    id: "salads",
+    name: "Салаты",
+     items: [
+      { id: 201, name: "Капрезе с томатами и Страчателлой", price: 630, weight: "230 г", icon: "💪", img: "https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?w=500" },
+      { id: 202, name: "Салат из овощей с сырными шариками", price: 490, weight: "230 г", icon: "💪", img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500" },
+      { id: 203, name: "Салат из телятины с овощами гриль", price: 630, weight: "220 г", icon: "💪", img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500" }
+    ]
+  },
+ {
+    id: "kashi",
+    name: "Каши",
+    items: [
+      { 
+        id: 4, 
+        name: "Каша из микса злаков с ванильным мороженым", 
+        price: 270, 
+        weight: "340 г", 
+        icon: "👶", 
+        img: "https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=800&q=80"     
+      },
+      { 
+        id: 5, 
+        name: "Рисовая каша с фруктами", 
+        price: 270, 
+        weight: "340 г", 
+        icon: "👶", 
+        img: "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?q=80&w=800&auto=format&fit=crop"
+
+      },
+      { 
+        id: 6, 
+        name: "Овсяная на кокосовом молоке", 
+        price: 320, 
+        weight: "300 г", 
+        icon: "🌿", 
+        img: "https://images.weserv.nl/?url=https://cdn.pixabay.com/photo/2016/11/06/23/31/breakfast-1804457_960_720.jpg" 
+      },
+      { 
+        id: 7, 
+        name: "Манная каша с манговым муссом и бананами", 
+        price: 290, 
+        weight: "310 г", 
+        icon: "👶", 
+        img: "https://images.unsplash.com/photo-1495214783159-3503fd1b572d?q=80&w=800&auto=format&fit=crop" 
+      },
+      { 
+        id: 8, 
+        name: "Гречневая каша карамелизированной грушей и орехом", 
+        price: 350, 
+        weight: "320 г", 
+        icon: "💪", 
+        img: "https://images.pexels.com/photos/4110006/pexels-photo-4110006.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+      },
+      { 
+        id: 9, 
+        name: "Пшенная каша с печеной тыквой", 
+        price: 310, 
+        weight: "350 г", 
+        icon: "🌿", 
+        img: "https://images.weserv.nl/?url=https://images.unsplash.com/photo-1604152135912-04a022e23696?w=500" 
+      }
+    ]
+  }
+];
+
+let cart = {};
+let currentFilter = 'Все';
+
+function setFilter(tag) {
+  currentFilter = tag;
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.remove('active-filter');
+    if (btn.innerText.includes(tag) || (tag === 'Все' && btn.innerText === 'Все')) btn.classList.add('active-filter');
+  });
+  renderMenu();
+}
+
+function addToCart(id) {
+  const product = menuData.flatMap(section => section.items).find(item => item.id === id);
+  
+  if (!product) return;
+
+  if (cart[id]) {
+    cart[id].count++;
+  } else {
+    cart[id] = { ...product, count: 1 };
+  }
+  updateCartUI();
+}
+
+function changeCount(id, delta) {
+  if (cart[id]) {
+    cart[id].count += delta;
+    if (cart[id].count <= 0) delete cart[id];
+    updateCartUI();
+  }
+}
+
+function updateCartUI() {
+  const trigger = document.getElementById("cart-trigger");
+  const previewContainer = document.getElementById("cart-previews");
+  const triggerPrice = document.getElementById("trigger-price");
+  const modalList = document.getElementById("cart-items-list");
+  const modalTotal = document.getElementById("modal-total-price");
+  
+  let totalItems = 0; let totalPrice = 0;
+  previewContainer.innerHTML = ""; modalList.innerHTML = "";
+
+  Object.keys(cart).forEach(id => {
+    const item = cart[id];
+    totalItems += item.count; totalPrice += item.price * item.count;
+
+    const img = document.createElement("img");
+    img.src = item.img;
+    img.className = "w-12 h-12 rounded-full border-4 border-[#8E24AA] object-cover bg-white";
+    previewContainer.appendChild(img);
+
+    modalList.innerHTML += `
+      <div class="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl">
+        <img src="${item.img}" class="w-16 h-16 rounded-xl object-cover">
+        <div class="flex-1">
+          <h4 class="font-bold text-sm leading-tight text-[#2D2E3E]">${item.name}</h4>
+          <p class="text-[#8E24AA] font-black">${item.price} сом</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="changeCount(${id}, -1)" class="w-8 h-8 rounded-full bg-white shadow-sm font-black">-</button>
+          <span class="font-bold">${item.count}</span>
+          <button onclick="changeCount(${id}, 1)" class="w-8 h-8 rounded-full bg-white shadow-sm font-black">+</button>
+        </div>
+      </div>`;
+  });
+
+  triggerPrice.textContent = totalPrice;
+  modalTotal.textContent = totalPrice;
+  if (totalItems > 0) trigger.classList.remove("translate-y-40");
+  else { trigger.classList.add("translate-y-40"); toggleCart(false); }
+}
+
+function toggleCart(show) {
+  const modal = document.getElementById("cart-modal");
+  if (show && Object.keys(cart).length > 0) {
+    modal.classList.remove("translate-y-full");
+    document.body.classList.add("modal-open");
+  } else {
+    modal.classList.add("translate-y-full");
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function renderMenu() {
+  const container = document.getElementById("menu-content");
+  const nav = document.getElementById("nav-container");
+  container.innerHTML = '';
+  nav.innerHTML = '<div id="active-bg" class="absolute h-full bg-[#2D2E3E] rounded-full z-0"></div>';
+
+  menuData.forEach((section) => {
+    const filtered = section.items.filter(item => currentFilter === 'Все' || item.icon === currentFilter);
+    if (filtered.length === 0) return;
+
+    const btn = document.createElement("button");
+    btn.className = `nav-link`;
+    btn.textContent = section.name;
+    btn.dataset.target = section.id;
+    btn.onclick = () => window.scrollTo({ top: document.getElementById(section.id).offsetTop - 140, behavior: 'smooth' });
+    nav.appendChild(btn);
+
+    const s = document.createElement("section");
+    s.id = section.id; s.className = "scroll-mt-40 mb-20";
+    s.innerHTML = `
+      <h2 class="text-3xl font-black mb-10 text-[#1a1a1a] px-2">${section.name}</h2>
+      <div class="menu-grid"> 
+        ${filtered.map(item => `
+          <div class="flex flex-col items-center text-center group">
+            <div class="relative mb-6 w-full max-w-[280px] mx-auto">
+              <img src="${item.img}" class="w-full aspect-square bg-gray-200 rounded-full object-cover shadow-sm">
+              <div class="absolute top-1 right-1 w-9 h-9 bg-[#8BC34A] text-white rounded-full flex items-center justify-center text-base border-2 border-white shadow-sm">${item.icon}</div>
+              <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-4 py-1 rounded-full text-[11px] text-gray-500 shadow-md border border-gray-100 font-black whitespace-nowrap">${item.weight}</div>
+            </div>
+            <h3 class="text-[16px] md:text-[19px] font-[800] leading-tight mb-4 min-h-[50px] flex items-center justify-center italic px-2">
+              ${item.name}
+            </h3>
+            <button onclick="addToCart(${item.id})" 
+                class="flex items-center gap-2 bg-[#F1F3F5] hover:bg-[#E2E6EA] px-6 py-2.5 rounded-full transition-all active:scale-95 shadow-sm">
+                <span class="text-xl font-light text-[#2D2E3E]">+</span>
+                <span class="text-[14px] font-bold text-[#2D2E3E] whitespace-nowrap">от ${item.price} сом</span>
+            </button>
+          </div>`).join("")}
+      </div>`;
+    container.appendChild(s);
+  });
+  setTimeout(updateNav, 50);
+}
+
+function updateNav() {
+  const sections = document.querySelectorAll("section");
+  const links = document.querySelectorAll(".nav-link");
+  const bg = document.getElementById("active-bg");
+  if(!bg || sections.length === 0) return;
+  let currentId = "";
+  sections.forEach(s => { if (window.pageYOffset >= s.offsetTop - 180) currentId = s.id; });
+  if (!currentId) currentId = sections[0].id;
+  links.forEach(l => {
+    l.classList.remove("active");
+    if (l.dataset.target === currentId) {
+      l.classList.add("active");
+      bg.style.width = l.offsetWidth + "px";
+      bg.style.left = l.offsetLeft + "px";
+      l.parentElement.parentElement.scrollTo({ left: l.offsetLeft - 100, behavior: 'smooth' });
+    }
+  });
+}
+
+window.addEventListener("scroll", updateNav);
+window.onload = renderMenu;
+</script>
+</body>
+</html>
